@@ -4,7 +4,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_NAME="code-graph"
+ENV_NAME="code_graph_314"
 TARGET_PATH="${1:-../unreal_project/Source}"
 OUTPUT_FILE="$SCRIPT_DIR/code_graph_output.html"
 
