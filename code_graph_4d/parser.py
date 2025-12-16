@@ -23,6 +23,7 @@ class FileInfo:
     functions: list[str] = field(default_factory=list)
     global_vars: list[str] = field(default_factory=list)
     is_header: bool = False
+    line_count: int = 0
 
 
 class CppParser:
@@ -52,7 +53,8 @@ class CppParser:
         
         info = FileInfo(
             path=filepath,
-            is_header=filepath.suffix.lower() in self.HEADER_EXTENSIONS
+            is_header=filepath.suffix.lower() in self.HEADER_EXTENSIONS,
+            line_count=content.count('\n') + 1
         )
         
         # Always use regex for includes (more reliable with various encodings)

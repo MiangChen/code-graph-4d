@@ -5,7 +5,7 @@ import sys
 from pathlib import Path
 
 from .parser import scan_directory
-from .graph_builder import build_dependency_graph, get_graph_stats
+from .graph_builder import build_dependency_graph, get_graph_stats, enrich_graph_with_analysis
 from .visualizer import generate_html, open_in_browser
 
 
@@ -60,6 +60,9 @@ def main():
     
     print("🔗 Building dependency graph...")
     graph = build_dependency_graph(files, args.path)
+    
+    print("🧠 Analyzing hierarchy and communities...")
+    graph = enrich_graph_with_analysis(graph)
     
     stats = get_graph_stats(graph)
     print(f"📊 Graph: {stats['total_files']} nodes, {stats['total_dependencies']} edges")

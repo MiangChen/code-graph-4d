@@ -52,6 +52,7 @@ def build_dependency_graph(files: list[FileInfo], root_path: Path) -> nx.DiGraph
             'functions': f.functions,
             'global_vars': f.global_vars,
             'type': 'header' if f.is_header else 'source',
+            'line_count': f.line_count,
             # Complexity metric for 4th dimension
             'complexity': len(f.classes) + len(f.structs) + len(f.functions),
         }
@@ -145,3 +146,72 @@ def _get_most_dependencies(G: nx.DiGraph, n: int) -> list[tuple[str, int]]:
     """Get files that include the most other files."""
     out_degrees = [(node, G.out_degree(node)) for node in G.nodes()]
     return sorted(out_degrees, key=lambda x: x[1], reverse=True)[:n]
+
+
+def compute_hierarchy_levels(G: nx.DiGraph) -> dict[str, int]:
+    """
+    Compute hierarchy level for each node based on dependency depth.
+    Level 0 = leaf nodes (no outgoing edges / don't include anything)
+    Higher levels = depend on more layers
+    """
+    levels: dict[str, int] = {}
+    
+    # Find all nodes with no outgoing edges (leaf/base files)
+    leaves = [n for n in G.nodes() if G.out_degree(n) == 0]
+    for leaf in leaves:
+        levels[leaf] = 0
+    
+    # BFS from leaves upward
+    def get_level(node: str, visited: set) -> int:
+        if node in levels:
+            return levels[node]
+        if node in visited:
+            return 0  # Cycle detected, break it
+        
+        visited.add(node)
+        successors = list(G.successors(node))  # Files this node includes
+        if not successors:
+            levels[node] = 0
+        else:
+            max_child_level = max(get_level(s, visited) for s in successors)
+            levels[node] = max_child_level + 1
+        
+        return levels[node]
+    
+    for node in G.nodes():
+        if node not in levels:
+            get_level(node, set())
+    
+    return levels
+
+
+def detect_communities(G: nx.DiGraph) -> dict[str, int]:
+    """
+    Detect communities/modules in the codebase using Louvain algorithm.
+    Returns mapping of node -> community_id
+    """
+    # Convert to undirected for community detection
+    G_undirected = G.to_undirected()
+    
+    try:
+        communities = nx.community.louvain_communities(G_undirected, seed=42)
+        node_to_community = {}
+        for idx, community in enumerate(communities):
+            for node in community:
+                node_to_community[node] = idx
+        return node_to_community
+    except Exception:
+        # Fallback: assign all to community 0
+        return {node: 0 for node in G.nodes()}
+
+
+def enrich_graph_with_analysis(G: nx.DiGraph) -> nx.DiGraph:
+    """Add hierarchy levels and community info to graph nodes."""
+    levels = compute_hierarchy_levels(G)
+    communities = detect_communities(G)
+    
+    for node in G.nodes():
+        G.nodes[node]['level'] = levels.get(node, 0)
+        G.nodes[node]['community'] = communities.get(node, 0)
+    
+    return G
