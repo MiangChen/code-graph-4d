@@ -147,6 +147,7 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
             cursor: pointer;
         }}
     </style>
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="https://unpkg.com/3d-force-graph@1"></script>
 </head>
 <body>
@@ -195,6 +196,7 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
         <label><input type="checkbox" id="color-community" checked> Community Colors</label>
         <label><input type="checkbox" id="show-boundary"> Boundary</label>
         <label><input type="checkbox" id="light-mode"> Light Mode</label>
+        <label><input type="checkbox" id="fly-mode"> Fly Mode</label>
     </div>
 
     <script>
@@ -332,6 +334,28 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
             }})
             .nodeVal(getNodeSize)
             .nodeOpacity(0.9)
+            .nodeThreeObject(node => {{
+                const size = getNodeSize(node);
+                const colorStr = getNodeColor(node);
+                const color = colorStr.startsWith('#') ? parseInt(colorStr.slice(1), 16) : 0x4fc3f7;
+                
+                let geometry;
+                if (node.isHeader) {{
+                    // Header files: Box (cube)
+                    geometry = new THREE.BoxGeometry(size * 1.2, size * 1.2, size * 1.2);
+                }} else {{
+                    // Source files: Sphere
+                    geometry = new THREE.SphereGeometry(size * 0.6, 16, 12);
+                }}
+                
+                const material = new THREE.MeshLambertMaterial({{
+                    color: color,
+                    transparent: true,
+                    opacity: 0.9
+                }});
+                return new THREE.Mesh(geometry, material);
+            }})
+            .nodeThreeObjectExtend(false)
             .linkColor(getLinkColor)
             .linkWidth(getLinkWidth)
             .linkDirectionalArrowLength(6)
@@ -370,11 +394,13 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
                 updateList('node-structs', 'structs-section', node.structs);
                 updateList('node-functions', 'functions-section', node.functions);
                 
-                // Focus on node
-                const distance = 100;
-                const distRatio = 1 + distance/Math.hypot(node.x, node.y, node.z);
+                // Focus on node - move 50% closer, but keep minimum distance of 150
+                const cam = Graph.camera();
+                const currentDist = Math.hypot(cam.position.x - node.x, cam.position.y - node.y, cam.position.z - node.z);
+                const targetDist = Math.max(150, currentDist * 0.5);
+                const distRatio = targetDist / Math.hypot(node.x, node.y, node.z) || 1;
                 Graph.cameraPosition(
-                    {{ x: node.x * distRatio, y: node.y * distRatio, z: node.z * distRatio }},
+                    {{ x: node.x * (1 + distRatio), y: node.y * (1 + distRatio), z: node.z * (1 + distRatio) }},
                     node,
                     1000
                 );
@@ -498,6 +524,35 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
             applyTheme();
             if (boundaryVisible) drawBoundary();
         }});
+        
+        // Fly mode - WASD keyboard navigation
+        let flyMode = false;
+        const flySpeed = 5;
+        const keys = {{}};
+        
+        document.addEventListener('keydown', (e) => {{ keys[e.key.toLowerCase()] = true; }});
+        document.addEventListener('keyup', (e) => {{ keys[e.key.toLowerCase()] = false; }});
+        
+        document.getElementById('fly-mode').addEventListener('change', (e) => {{
+            flyMode = e.target.checked;
+            Graph.controls().screenSpacePanning = flyMode;
+        }});
+        
+        // Fly animation loop
+        (function flyLoop() {{
+            if (flyMode) {{
+                const cam = Graph.camera();
+                const ctrl = Graph.controls();
+                if (keys['w']) ctrl.target.z -= flySpeed;
+                if (keys['s']) ctrl.target.z += flySpeed;
+                if (keys['a']) ctrl.target.x -= flySpeed;
+                if (keys['d']) ctrl.target.x += flySpeed;
+                if (keys['q'] || keys[' ']) ctrl.target.y += flySpeed;
+                if (keys['e']) ctrl.target.y -= flySpeed;
+                ctrl.update();
+            }}
+            requestAnimationFrame(flyLoop);
+        }})();
     </script>
 </body>
 </html>'''
