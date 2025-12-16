@@ -146,6 +146,53 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
             margin-right: 15px;
             cursor: pointer;
         }}
+        #file-tree {{
+            position: absolute;
+            top: 200px;
+            left: 10px;
+            background: rgba(20, 20, 30, 0.9);
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            max-width: 280px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 12px;
+            display: block;
+        }}
+        #file-tree h4 {{
+            margin: 0 0 8px 0;
+            color: #4fc3f7;
+            cursor: pointer;
+        }}
+        .tree-folder {{
+            margin-left: 12px;
+        }}
+        .tree-folder-name {{
+            color: #ffc107;
+            cursor: pointer;
+            user-select: none;
+        }}
+        .tree-folder-name:hover {{
+            color: #ffeb3b;
+        }}
+        .tree-file {{
+            margin-left: 12px;
+            cursor: pointer;
+            padding: 2px 0;
+        }}
+        .tree-file:hover {{
+            color: #4fc3f7;
+        }}
+        .tree-file.header {{
+            color: #81c784;
+        }}
+        .tree-file.source {{
+            color: #aaa;
+        }}
+        .tree-collapsed {{
+            display: none;
+        }}
     </style>
     <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
     <script src="https://unpkg.com/3d-force-graph@1"></script>
@@ -197,6 +244,12 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
         <label><input type="checkbox" id="show-boundary"> Boundary</label>
         <label><input type="checkbox" id="light-mode"> Light Mode</label>
         <label><input type="checkbox" id="fly-mode"> Fly Mode</label>
+        <label><input type="checkbox" id="show-tree" checked> Tree</label>
+    </div>
+    
+    <div id="file-tree">
+        <h4>📁 File Tree</h4>
+        <div id="tree-content"></div>
     </div>
 
     <script>
@@ -396,13 +449,18 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
                 updateList('node-structs', 'structs-section', node.structs);
                 updateList('node-functions', 'functions-section', node.functions);
                 
-                // Focus on node - move 50% closer, but keep minimum distance of 150
+                // Focus on node - move 50% closer, but keep minimum distance of 200
                 const cam = Graph.camera();
-                const currentDist = Math.hypot(cam.position.x - node.x, cam.position.y - node.y, cam.position.z - node.z);
-                const targetDist = Math.max(150, currentDist * 0.5);
-                const distRatio = targetDist / Math.hypot(node.x, node.y, node.z) || 1;
+                const dx = cam.position.x - node.x;
+                const dy = cam.position.y - node.y;
+                const dz = cam.position.z - node.z;
+                const currentDist = Math.hypot(dx, dy, dz);
+                const targetDist = Math.max(200, currentDist * 0.5);
+                
+                // Calculate new camera position at targetDist from node
+                const scale = targetDist / currentDist;
                 Graph.cameraPosition(
-                    {{ x: node.x * (1 + distRatio), y: node.y * (1 + distRatio), z: node.z * (1 + distRatio) }},
+                    {{ x: node.x + dx * scale, y: node.y + dy * scale, z: node.z + dz * scale }},
                     node,
                     1000
                 );
@@ -555,6 +613,94 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
             }}
             requestAnimationFrame(flyLoop);
         }})();
+        
+        // File tree
+        function buildFileTree() {{
+            const tree = {{}};
+            graphData.nodes.forEach(node => {{
+                const parts = node.path.split('/');
+                let current = tree;
+                parts.forEach((part, i) => {{
+                    if (i === parts.length - 1) {{
+                        // File
+                        if (!current._files) current._files = [];
+                        current._files.push({{ name: part, node: node }});
+                    }} else {{
+                        // Folder
+                        if (!current[part]) current[part] = {{}};
+                        current = current[part];
+                    }}
+                }});
+            }});
+            return tree;
+        }}
+        
+        function renderTree(tree, container, path = '') {{
+            // Render folders first
+            Object.keys(tree).filter(k => k !== '_files').sort().forEach(folder => {{
+                const folderDiv = document.createElement('div');
+                folderDiv.className = 'tree-folder';
+                
+                const folderName = document.createElement('span');
+                folderName.className = 'tree-folder-name';
+                folderName.textContent = '📁 ' + folder;
+                folderName.onclick = () => {{
+                    const content = folderDiv.querySelector('.tree-folder-content');
+                    if (content) content.classList.toggle('tree-collapsed');
+                }};
+                folderDiv.appendChild(folderName);
+                
+                const content = document.createElement('div');
+                content.className = 'tree-folder-content';
+                renderTree(tree[folder], content, path + folder + '/');
+                folderDiv.appendChild(content);
+                
+                container.appendChild(folderDiv);
+            }});
+            
+            // Render files
+            if (tree._files) {{
+                tree._files.sort((a, b) => a.name.localeCompare(b.name)).forEach(file => {{
+                    const fileDiv = document.createElement('div');
+                    fileDiv.className = 'tree-file ' + (file.node.isHeader ? 'header' : 'source');
+                    fileDiv.textContent = (file.node.isHeader ? '📄 ' : '📝 ') + file.name;
+                    fileDiv.onclick = () => {{
+                        // Find and focus on node
+                        const node = graphData.nodes.find(n => n.id === file.node.id);
+                        if (node && node.x !== undefined) {{
+                            Graph.cameraPosition(
+                                {{ x: node.x + 150, y: node.y + 150, z: node.z + 150 }},
+                                node,
+                                1000
+                            );
+                            updateHighlight(node);
+                            Graph.nodeColor(Graph.nodeColor())
+                                .linkColor(getLinkColor)
+                                .linkWidth(getLinkWidth);
+                        }}
+                    }};
+                    container.appendChild(fileDiv);
+                }});
+            }}
+        }}
+        
+        // Tree toggle
+        document.getElementById('show-tree').addEventListener('change', (e) => {{
+            const treePanel = document.getElementById('file-tree');
+            treePanel.style.display = e.target.checked ? 'block' : 'none';
+            if (e.target.checked && !treePanel.dataset.built) {{
+                const tree = buildFileTree();
+                renderTree(tree, document.getElementById('tree-content'));
+                treePanel.dataset.built = 'true';
+            }}
+        }});
+        
+        // Build tree on load (default open)
+        setTimeout(() => {{
+            const tree = buildFileTree();
+            renderTree(tree, document.getElementById('tree-content'));
+            document.getElementById('file-tree').dataset.built = 'true';
+        }}, 100);
     </script>
 </body>
 </html>'''
