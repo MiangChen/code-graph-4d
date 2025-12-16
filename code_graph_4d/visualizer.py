@@ -10,9 +10,9 @@ import networkx as nx
 
 
 def _calc_radius(line_count: int) -> float:
-    """Calculate node radius using linear scale: lines / 20."""
+    """Calculate node size: lines / 2 = diameter = box edge length."""
     lines = max(10, line_count)
-    return round(lines / 20, 2)  # 100 lines = 5, 500 lines = 25
+    return round(lines / 2, 2)  # 100 lines = 50 (diameter/edge)
 
 
 def graph_to_json(G: nx.DiGraph) -> dict[str, Any]:
@@ -335,17 +335,19 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
             .nodeVal(getNodeSize)
             .nodeOpacity(0.9)
             .nodeThreeObject(node => {{
-                const size = getNodeSize(node);
+                const lines = node.lineCount || 10;
                 const colorStr = getNodeColor(node);
                 const color = colorStr.startsWith('#') ? parseInt(colorStr.slice(1), 16) : 0x4fc3f7;
                 
                 let geometry;
                 if (node.isHeader) {{
-                    // Header files: Box (cube)
-                    geometry = new THREE.BoxGeometry(size * 1.2, size * 1.2, size * 1.2);
+                    // Header files: Box, edge = lines / 10
+                    const edge = Math.max(3, lines / 10);
+                    geometry = new THREE.BoxGeometry(edge, edge, edge);
                 }} else {{
-                    // Source files: Sphere
-                    geometry = new THREE.SphereGeometry(size * 0.6, 16, 12);
+                    // Source files: Sphere, radius = lines / 40
+                    const radius = Math.max(2, lines / 40);
+                    geometry = new THREE.SphereGeometry(radius, 16, 12);
                 }}
                 
                 const material = new THREE.MeshLambertMaterial({{
