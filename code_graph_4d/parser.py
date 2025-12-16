@@ -55,10 +55,14 @@ class CppParser:
             is_header=filepath.suffix.lower() in self.HEADER_EXTENSIONS
         )
         
+        # Always use regex for includes (more reliable with various encodings)
+        self._parse_includes_regex(content, info)
+        
+        # Use tree-sitter for declarations if available
         if self.parser and HAS_TREE_SITTER:
-            self._parse_with_tree_sitter(content, info)
+            self._parse_declarations_ts(content, info)
         else:
-            self._parse_with_regex(content, info)
+            self._parse_declarations_regex(content, info)
         
         return info
     
@@ -66,25 +70,15 @@ class CppParser:
         """Check if file is a C++ source or header."""
         return filepath.suffix.lower() in (self.HEADER_EXTENSIONS | self.SOURCE_EXTENSIONS)
     
-    def _parse_with_tree_sitter(self, content: str, info: FileInfo):
-        """Parse using tree-sitter for accurate AST."""
-        tree = self.parser.parse(bytes(content, 'utf-8'))
-        root = tree.root_node
-        
-        self._extract_includes_ts(root, content, info)
-        self._extract_declarations_ts(root, content, info)
+    def _parse_includes_regex(self, content: str, info: FileInfo):
+        """Extract #include directives using regex (reliable)."""
+        include_pattern = r'#include\s*[<"]([^>"]+)[>"]'
+        info.includes = re.findall(include_pattern, content)
     
-    def _extract_includes_ts(self, node, content: str, info: FileInfo):
-        """Extract #include directives using tree-sitter."""
-        if node.type == 'preproc_include':
-            for child in node.children:
-                if child.type in ('string_literal', 'system_lib_string'):
-                    include_path = content[child.start_byte:child.end_byte]
-                    include_path = include_path.strip('"<>')
-                    info.includes.append(include_path)
-        
-        for child in node.children:
-            self._extract_includes_ts(child, content, info)
+    def _parse_declarations_ts(self, content: str, info: FileInfo):
+        """Parse declarations using tree-sitter."""
+        tree = self.parser.parse(bytes(content, 'utf-8'))
+        self._extract_declarations_ts(tree.root_node, content, info)
     
     def _extract_declarations_ts(self, node, content: str, info: FileInfo):
         """Extract classes, structs, functions from AST."""
@@ -154,18 +148,14 @@ class CppParser:
                 return content[child.start_byte:child.end_byte]
         return None
     
-    def _parse_with_regex(self, content: str, info: FileInfo):
-        """Fallback regex-based parsing."""
-        # Extract includes
-        include_pattern = r'#include\s*[<"]([^>"]+)[>"]'
-        info.includes = re.findall(include_pattern, content)
-        
+    def _parse_declarations_regex(self, content: str, info: FileInfo):
+        """Fallback regex-based parsing for declarations."""
         # Extract classes
-        class_pattern = r'\bclass\s+(\w+)'
+        class_pattern = r'\bclass\s+(?:MULTIAGENT_API\s+)?(\w+)'
         info.classes = re.findall(class_pattern, content)
         
         # Extract structs
-        struct_pattern = r'\bstruct\s+(\w+)'
+        struct_pattern = r'\bstruct\s+(?:MULTIAGENT_API\s+)?(\w+)'
         info.structs = re.findall(struct_pattern, content)
         
         # Extract global functions (simplified)

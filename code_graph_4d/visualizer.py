@@ -174,10 +174,12 @@ def generate_html(G: nx.DiGraph, output_path: Path, title: str = "Code Graph 4D"
             .nodeColor(node => node.isHeader ? '#4fc3f7' : '#81c784')
             .nodeVal(node => Math.max(3, node.complexity * 2))
             .nodeOpacity(0.9)
-            .linkColor(() => 'rgba(255,255,255,0.2)')
-            .linkWidth(0.5)
-            .linkDirectionalArrowLength(3)
+            .linkColor(() => 'rgba(255,180,100,0.6)')
+            .linkWidth(2)
+            .linkDirectionalArrowLength(6)
             .linkDirectionalArrowRelPos(1)
+            .linkDirectionalArrowColor(() => 'rgba(255,200,120,0.8)')
+            .linkOpacity(0.7)
             .backgroundColor('#0a0a0f')
             .onNodeClick(node => {{
                 // Show node info panel
