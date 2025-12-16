@@ -13,7 +13,7 @@ A 3D/4D visualization tool for C++ codebase architecture analysis.
 
 ```bash
 # Create conda environment
-conda create -n code-graph python=3.12 -y
+conda create -n code-graph python=3.14 -y
 conda activate code-graph
 
 # Install dependencies
@@ -31,7 +31,7 @@ python -m code_graph_4d.main /path/to/cpp/project
 
 ## Tech Stack
 
-- Python 3.12 + NetworkX (graph construction)
+- Python 3.14 + NetworkX (graph construction)
 - tree-sitter (C++ parsing)
 - 3d-force-graph (Three.js based 3D visualization)
 
