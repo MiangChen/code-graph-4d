@@ -1,91 +1,75 @@
 # Code-Graph-4D
 
-A 3D/4D visualization tool for C++ codebase architecture analysis.
+[English](README_EN.md) | 中文
 
-![Demo](https://img.shields.io/badge/Python-3.14-blue) ![License](https://img.shields.io/badge/License-MIT-green)
+C++ 代码库架构的 3D/4D 可视化工具。
 
-## Features
+## 功能特性
 
-- 📁 Parse C++ source files (headers, classes, structs, functions)
-- 🔗 Analyze file dependencies through `#include` directives
-- 🌐 Interactive 3D force-directed graph in browser
-- 🎨 Community detection (auto-discover modules)
-- 📊 Hierarchy level analysis
-- 🔍 Click to highlight dependency chains
-- 🌳 File tree panel for navigation
-- 🌓 Light/Dark mode
-- ✈️ Fly mode (WASD navigation)
+| | |
+|:---:|:---:|
+| ![UI1](asset/ui1.png) | ![UI2](asset/ui2.png) |
 
-## Installation
+- 📁 解析 C++ 源文件（头文件、类、结构体、函数）
+- 🔗 通过 `#include` 分析文件依赖关系
+- 🌐 浏览器中交互式 3D 力导向图
+- 🎨 社区检测（自动发现模块）
+- 📊 层级分析
+- 🔍 点击高亮依赖链
+- 🌳 文件树导航面板
+- 🌓 明/暗主题切换
+- ✈️ 飞行模式（WASD 导航）
 
-```bash
-# Create conda environment
-conda create -n code-graph python=3.14 -y
-conda activate code-graph
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-## Usage
+## 快速开始
 
 ```bash
-# Quick start
 ./compile_and_start.sh /path/to/cpp/project
-
-# Or manually
-python -m code_graph_4d.main /path/to/cpp/project
 ```
 
-## Controls
+## 操作说明
 
-| Control | Action |
-|---------|--------|
-| Drag | Rotate view |
-| Scroll | Zoom |
-| Click node | Highlight dependencies |
-| Click background | Clear highlight |
-| WASD (Fly mode) | Navigate |
-| Q/E (Fly mode) | Up/Down |
+| 操作 | 功能 |
+|------|------|
+| 拖拽 | 旋转视角 |
+| 滚轮 | 缩放 |
+| 点击节点 | 高亮依赖关系 |
+| 点击背景 | 取消高亮 |
+| WASD (飞行模式) | 导航 |
+| Q/E (飞行模式) | 上升/下降 |
 
-## Visualization
+## 可视化说明
 
-- **Node Shape**: Header (.h) = Box ■, Source (.cpp) = Sphere ●
-- **Node Size**: Based on line count
-- **Node Color**: Community-based (auto-detected modules)
-- **Edge Width**: Based on reference count
+- **节点形状**: 头文件 (.h) = 方块 ■, 源文件 (.cpp) = 球体 ●
+- **节点大小**: 基于代码行数
+- **节点颜色**: 基于社区（自动检测的模块）
+- **边的粗细**: 基于引用次数
 
-## Project Structure
+## 项目结构
 
 ```
 code-graph-4d/
 ├── code_graph_4d/
-│   ├── __init__.py
-│   ├── main.py              # CLI entry point
-│   ├── parser.py            # C++ file parser (tree-sitter)
-│   ├── graph_builder.py     # NetworkX graph construction
-│   ├── visualizer.py        # HTML generation
-│   └── templates/
-│       ├── graph.html       # HTML structure
-│       ├── styles.css       # CSS styles
-│       └── graph.js         # JavaScript logic
-├── compile_and_start.sh     # Quick start script
-├── requirements.txt
+│   ├── main.py              # CLI 入口
+│   ├── parser.py            # C++ 解析器
+│   ├── graph_builder.py     # NetworkX 图构建
+│   ├── visualizer.py        # HTML 生成
+│   └── templates/           # 前端模板
+├── compile_and_start.sh     # 快速启动脚本
 └── README.md
 ```
 
-## Tech Stack
+## 技术栈
 
-- Python 3.14 + NetworkX (graph analysis)
-- tree-sitter (C++ parsing)
-- 3d-force-graph + Three.js (3D visualization)
+- Python 3.14 + NetworkX
+- tree-sitter (C++ 解析)
+- 3d-force-graph + Three.js
 
-## Future (4th Dimension)
+## 未来计划 (第四维度)
 
-- ⏱️ Git history timeline visualization
-- 🔥 Code complexity heatmap
-- 👥 Team ownership overlay
+- ⏱️ Git 历史时间线可视化
+- 🔥 代码复杂度热力图
+- 👥 团队所有权覆盖
 
-## License
+## 许可证
 
 MIT
